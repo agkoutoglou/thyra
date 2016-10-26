@@ -11,12 +11,20 @@ import (
 
 func Init(c *Client) error {
 
-	io.WriteString(c.Conn, "\033[2J")
+	var err error
+
+	err = setup_term()
+	if err != nil {
+		return fmt.Errorf("termbox: error while reading terminfo data: %v", err)
+	}
+
+	io.WriteString(c.Conn, funcs[t_enter_ca])
+	io.WriteString(c.Conn, funcs[t_clear_screen])
 
 	//TODO : get terminal size from Client
 	termw, termh = 132, 32
 
-	log.Info(fmt.Sprintf("TermW:%d , TermH:%d ", termw, termh))
+	log.Info(fmt.Sprintf("TermW: %d, TermH: %d ", termw, termh))
 
 	backb := New(termw, termh)
 	frontb := New(termw, termh)
@@ -27,12 +35,11 @@ func Init(c *Client) error {
 
 	c.Bbuffer = backb
 	c.Fbuffer = frontb
-	log.Info(fmt.Sprintf("Init OK : %s", c.Player.Nickname))
+	log.Info(fmt.Sprintf("Init OK: %s", c.Player.Nickname))
 	return nil
 }
 
 func Close(c Client) {
-
 	io.WriteString(c.Conn, "\033[2J")
 
 	// reset the state, so that on next Init() it will work again
@@ -106,13 +113,13 @@ func Flush(c *Client) error {
 	if !is_cursor_hidden(cursor_x, cursor_y) {
 		write_cursor(cursor_x, cursor_y, *c)
 	}
-	log.Info(fmt.Sprintf("Flush :%s", c.Player.Nickname))
-	return flush(c)
+	log.Info(fmt.Sprintf("Flush: %s", c.Player.Nickname))
+	c.Buff.Reset()
+	return nil
 }
 
 // Sets the position of the cursor. See also HideCursor().
 func SetCursor(x, y int, c Client) {
-
 	cursor_x, cursor_y = x, y
 	if !is_cursor_hidden(cursor_x, cursor_y) {
 		write_cursor(cursor_x, cursor_y, c)
@@ -127,7 +134,6 @@ func HideCursor(c Client) {
 // Changes cell's parameters in the internal back buffer at the specified
 // position.
 func SetCell(x, y int, ch rune, fg, bg Attribute, c *Client) {
-
 	if x < 0 || x >= c.Bbuffer.Width {
 		return
 	}
@@ -136,7 +142,6 @@ func SetCell(x, y int, ch rune, fg, bg Attribute, c *Client) {
 	}
 
 	c.Bbuffer.Cells[y*c.Bbuffer.Width+x] = Cell{ch, fg, bg}
-
 }
 
 func Size() (width int, height int) {
@@ -145,7 +150,6 @@ func Size() (width int, height int) {
 
 // Clears the internal back buffer.
 func Clear(fg, bg Attribute, c *Client) error {
-
 	foreground, background = fg, bg
 	err := update_size_maybe(c)
 	c.Bbuffer.clear()
